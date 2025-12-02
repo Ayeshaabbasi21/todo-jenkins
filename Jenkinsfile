@@ -93,29 +93,3 @@ pipeline {
         }
     }
 }
-```
-
----
-
-### **Step 4: Update Your `.gitignore`**
-
-Add these lines to your `.gitignore`:
-```
-# Python
-__pycache__/
-*.pyc
-.pytest_cache/
-
-# Test results
-test-results.xml
-
-# Logs
-app.log
-nohup.out
-
-# Environment
-.env
-node_modules/
-
-# AWS
-*.pem
