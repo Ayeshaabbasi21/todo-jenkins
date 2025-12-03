@@ -20,13 +20,15 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | \
 
 # Install ChromeDriver
 RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1) && \
-    wget -q "https://storage.googleapis.com/chrome-for-testing-public/$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json | grep -oP "\"Stable\":{\"version\":\"\K[^\"]+\"" | tr -d '"')/linux64/chromedriver-linux64.zip" -O /tmp/chromedriver.zip && \
+    LATEST_STABLE=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
+        | grep -oP '"Stable":\{"version":"\K[^"]+') && \
+    wget -q "https://storage.googleapis.com/chrome-for-testing-public/${LATEST_STABLE}/linux64/chromedriver-linux64.zip" -O /tmp/chromedriver.zip && \
     unzip -j /tmp/chromedriver.zip chromedriver-linux64/chromedriver -d /usr/local/bin/ && \
     rm /tmp/chromedriver.zip && \
     chmod +x /usr/local/bin/chromedriver
 
-
-COPY req.txt requirements.txt ./
+# Install Python dependencies
+COPY req.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set working directory
