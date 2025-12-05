@@ -7,13 +7,16 @@ pipeline {
         TODO_REPO = 'https://github.com/Ayeshaabbasi21/todo-jenkins.git'
         DOCKER_IMAGE = 'markhobson/maven-chrome'
         GITHUB_CREDENTIALS = 'github-pat'
-        GMAIL_CREDENTIALS = 'gmail-app-pass' // App password credential ID
+        // Gmail app password configured globally in Jenkins SMTP settings
     }
 
     stages {
         stage('Checkout Repo') {
             steps {
-                git url: "${TODO_REPO}", credentialsId: "${GITHUB_CREDENTIALS}"
+                // Checkout main branch once
+                git branch: 'main',
+                    url: "${TODO_REPO}",
+                    credentialsId: "${GITHUB_CREDENTIALS}"
             }
         }
 
@@ -49,7 +52,7 @@ pipeline {
                 sh '''
                     mkdir -p test-results
 
-                    # Run Selenium tests from selenium-tests folder
+                    # Run Selenium tests
                     docker run --rm \
                         --network=host \
                         -v $(pwd)/selenium-tests:/app \
@@ -78,24 +81,23 @@ pipeline {
             // Archive logs
             archiveArtifacts artifacts: 'app.log', allowEmptyArchive: true
 
-            // Email results
+            // Email notifications
             emailext (
-    subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-    body: """
-    <h2>Build ${currentBuild.currentResult}</h2>
-    <p><b>Job:</b> ${env.JOB_NAME}</p>
-    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
-    <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-    <h3>Test Results</h3>
-    <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
-    """,
-    mimeType: 'text/html',
-    to: '$DEFAULT_RECIPIENTS',
-    recipientProviders: [[$class: 'CulpritsRecipientProvider']],
-    replyTo: 'ayesha13abbasi@gmail.com',
-    from: 'ayesha13abbasi@gmail.com'
-)
-
+                subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+                body: """
+                    <h2>Build ${currentBuild.currentResult}</h2>
+                    <p><b>Job:</b> ${env.JOB_NAME}</p>
+                    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                    <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                    <h3>Test Results</h3>
+                    <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
+                """,
+                mimeType: 'text/html',
+                // Send directly to your registered email; works even if SCM user mapping fails
+                to: 'ayesha13abbasi@gmail.com',
+                replyTo: 'ayesha13abbasi@gmail.com',
+                from: 'ayesha13abbasi@gmail.com'
+            )
         }
 
         success {
