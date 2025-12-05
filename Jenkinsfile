@@ -1,145 +1,120 @@
 pipeline {
     agent any
-    
+
     environment {
-        DOCKER_IMAGE = 'selenium-todo-tests'
         APP_PORT = '5000'
         MONGODB_PORT = '27017'
-        GITHUB_CREDENTIALS = 'github-pat' // Jenkins credentials ID for GitHub PAT
+        APP_REPO = 'https://github.com/YourUsername/mern-app.git'
+        TEST_REPO = 'https://github.com/YourUsername/selenium-tests.git'
+        DOCKER_IMAGE = 'markhobson/maven-chrome'
+        GITHUB_CREDENTIALS = 'github-pat'
+        GMAIL_CREDENTIALS = 'gmail-app-pass' // App password credential ID
     }
-    
-    stages {
-        stage('Checkout') {
-            steps {
-                echo '========== Checking out code from GitHub =========='
-                script {
-                    // Ensure permissions are correct to avoid index.lock errors
-                    sh 'sudo chown -R jenkins:jenkins $WORKSPACE || true'
-                    sh 'chmod -R u+rwX $WORKSPACE || true'
 
-                    // Checkout using credentials
-                    checkout([$class: 'GitSCM',
-                        branches: [[name: '*/main']],
-                        doGenerateSubmoduleConfigurations: false,
-                        extensions: [],
-                        userRemoteConfigs: [[
-                            url: 'https://github.com/Ayeshaabbasi21/todo-jenkins.git',
-                            credentialsId: "${GITHUB_CREDENTIALS}"
-                        ]]
-                    ])
-                }
-            }
-        }
-        
-        stage('Build Docker Image') {
+    stages {
+        stage('Checkout App') {
             steps {
-                echo '========== Building Docker test image =========='
-                script {
-                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
+                git url: "${APP_REPO}", credentialsId: "${GITHUB_CREDENTIALS}"
+            }
+        }
+
+        stage('Checkout Tests') {
+            steps {
+                dir('selenium-tests') {
+                    git url: "${TEST_REPO}", credentialsId: "${GITHUB_CREDENTIALS}"
                 }
             }
         }
-        
+
         stage('Setup Application') {
             steps {
-                echo '========== Setting up Todo application =========='
-                script {
-                    sh '''
-                        # Kill any existing processes
-                        kill -9 $(lsof -t -i:5000) 2>/dev/null || true
-                        kill -9 $(lsof -t -i:27017) 2>/dev/null || true
-                        
-                        # Install npm dependencies
-                        npm install
-                        
-                        # Start MongoDB (assuming installed)
-                        sudo systemctl start mongod || mongod --dbpath /data/db --fork --logpath /var/log/mongodb.log
-                        
-                        # Wait for MongoDB
-                        sleep 5
-                        
-                        # Start app in background
-                        nohup npm start > app.log 2>&1 &
-                        echo $! > app.pid
-                        
-                        # Wait for app to be ready
-                        for i in {1..30}; do
-                            curl -f http://localhost:5000 && exit 0 || echo "Attempt $i: App not ready"
-                            sleep 2
-                        done
-                        echo "ERROR: App failed to start"
-                        cat app.log
-                        exit 1
-                    '''
-                }
+                sh '''
+                    # Kill old processes
+                    kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
+                    kill -9 $(lsof -t -i:${MONGODB_PORT}) 2>/dev/null || true
+
+                    # Install dependencies
+                    npm install
+
+                    # Start MongoDB
+                    sudo systemctl start mongod || mongod --dbpath /data/db --fork --logpath /var/log/mongodb.log
+                    sleep 5
+
+                    # Start app
+                    nohup npm start > app.log 2>&1 &
+                    echo $! > app.pid
+
+                    # Wait for app
+                    for i in {1..30}; do
+                        curl -f http://localhost:${APP_PORT} && exit 0 || echo "Waiting for app..."
+                        sleep 2
+                    done
+                '''
             }
         }
-        
+
         stage('Run Selenium Tests') {
             steps {
-                echo '========== Running Selenium Tests =========='
-                script {
-                    sh """
-                        docker run --rm \
-                            --network=host \
-                            -v \$(pwd)/test-results:/app/test-results \
-                            ${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                            pytest selenium-tests/test_todo_app.py \
-                                -v -s --tb=short \
-                                --junitxml=/app/test-results/test-results.xml
-                    """
-                }
+                sh '''
+                    mkdir -p test-results
+                    docker run --rm \
+                        --network=host \
+                        -v $(pwd)/selenium-tests:/app \
+                        -v $(pwd)/test-results:/app/test-results \
+                        ${DOCKER_IMAGE} \
+                        mvn -f /app/pom.xml test
+                '''
             }
         }
     }
-    
+
     post {
         always {
-            echo '========== Cleanup =========='
-            script {
-                sh '''
-                    if [ -f app.pid ]; then
-                        kill -9 $(cat app.pid) 2>/dev/null || true
-                        rm -f app.pid
-                    fi
-                    kill -9 $(lsof -t -i:5000) 2>/dev/null || true
-                '''
-                
-                junit allowEmptyResults: true, testResults: 'test-results/test-results.xml'
-                archiveArtifacts artifacts: 'app.log', allowEmptyArchive: true
-                
-                // Clean old Docker images
-                sh """
-                    docker images ${DOCKER_IMAGE} --format "{{.Tag}}" | \
-                    sort -rn | tail -n +4 | \
-                    xargs -I {} docker rmi ${DOCKER_IMAGE}:{} 2>/dev/null || true
-                """
-            }
-            
-            // Email notification
+            echo 'Cleaning up app...'
+            sh '''
+                if [ -f app.pid ]; then
+                    kill -9 $(cat app.pid) || true
+                    rm -f app.pid
+                fi
+                kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
+            '''
+
+            // Publish JUnit results
+            junit allowEmptyResults: true, testResults: 'selenium-tests/target/surefire-reports/*.xml'
+
+            // Archive logs
+            archiveArtifacts artifacts: 'app.log', allowEmptyArchive: true
+
+            // Email results
             emailext (
                 subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
                 body: """
-                    <h2>Build ${currentBuild.currentResult}</h2>
-                    <p><b>Job:</b> ${env.JOB_NAME}</p>
-                    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
-                    <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                    <p><b>Test Results:</b> <a href="${env.BUILD_URL}testReport/">${env.BUILD_URL}testReport/</a></p>
-                    
-                    <h3>Build Log (Last 50 lines):</h3>
-                    <pre>${currentBuild.rawBuild.getLog(50).join('\n')}</pre>
+                <h2>Build ${currentBuild.currentResult}</h2>
+                <p><b>Job:</b> ${env.JOB_NAME}</p>
+                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                <h3>Test Results</h3>
+                <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
                 """,
                 mimeType: 'text/html',
-                to: '${DEFAULT_RECIPIENTS}',
-                recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+                to: '$DEFAULT_RECIPIENTS',
+                recipientProviders: [[$class: 'CulpritsRecipientProvider']], // sends to committers
+                replyTo: 'ayesha13abbasi@gmail.com',
+                from: 'ayesha13abbasi@gmail.com',
+                credentialsId: "${GMAIL_CREDENTIALS}"
             )
         }
+
         success {
-            echo '✅ ========== ALL TESTS PASSED! =========='
+            echo '✅ All tests passed!'
         }
+
+        unstable {
+            echo '⚠️ Some tests failed!'
+        }
+
         failure {
-            echo '❌ ========== TESTS FAILED! =========='
-            sh 'cat app.log || echo "No application log available"'
+            echo '❌ Build failed!'
         }
     }
 }
