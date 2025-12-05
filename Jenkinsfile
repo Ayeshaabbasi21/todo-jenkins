@@ -28,24 +28,24 @@ pipeline {
                 echo '========== Setting up Todo application =========='
                 script {
                     sh '''
-                        # Kill any existing process on port 5000
+                        // Kill any existing process on port 5000
                         kill -9 $(lsof -t -i:5000) || true
                         
-                        # Install npm dependencies
+                        // Install npm dependencies
                         npm install
                         
-                        # Start MongoDB in background (no sudo needed in Docker)
+                        // Start MongoDB in background (no sudo needed in Docker)
                         mkdir -p /data/db
                         mongod --dbpath /data/db --bind_ip_all &
                         
-                        # Start application in background
+                        // Start application in background
                         nohup npm start > app.log 2>&1 &
                         
-                        # Wait for app to be ready
+                        // Wait for app to be ready
                         echo "Waiting for application to start..."
                         sleep 15
                         
-                        # Verify app is running
+                        // Verify app is running
                         curl -f http://localhost:5000 || (echo "App failed to start" && cat app.log && exit 1)
                         echo "Application is running!"
                     '''
@@ -73,13 +73,13 @@ pipeline {
         always {
             echo '========== Cleanup =========='
             script {
-                # Stop the application
+                // Stop the application
                 sh 'kill -9 $(lsof -t -i:5000) || true'
                 
-                # Archive test results
+                // Archive test results
                 junit allowEmptyResults: true, testResults: 'test-results.xml'
                 
-                # Clean up Docker images (keep last 3 builds)
+                // Clean up Docker images (keep last 3 builds)
                 sh """
                     docker images ${DOCKER_IMAGE} --format "{{.Tag}}" | sort -rn | tail -n +4 | xargs -I {} docker rmi ${DOCKER_IMAGE}:{} || true
                 """
