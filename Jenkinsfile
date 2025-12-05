@@ -8,7 +8,6 @@ pipeline {
         TEST_REPO = 'https://github.com/YourUsername/selenium-tests.git'
         DOCKER_IMAGE = 'markhobson/maven-chrome'
         GITHUB_CREDENTIALS = 'github-pat'
-        GMAIL_CREDENTIALS = 'gmail-app-pass' // App password credential ID
     }
 
     stages {
@@ -33,14 +32,14 @@ pipeline {
                     kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
                     kill -9 $(lsof -t -i:${MONGODB_PORT}) 2>/dev/null || true
 
-                    # Install dependencies
+                    # Install npm dependencies
                     npm install
 
                     # Start MongoDB
                     sudo systemctl start mongod || mongod --dbpath /data/db --fork --logpath /var/log/mongodb.log
                     sleep 5
 
-                    # Start app
+                    # Start MERN app
                     nohup npm start > app.log 2>&1 &
                     echo $! > app.pid
 
@@ -85,7 +84,7 @@ pipeline {
             // Archive logs
             archiveArtifacts artifacts: 'app.log', allowEmptyArchive: true
 
-            // Email results
+            // Email committers automatically using configured Jenkins SMTP
             emailext (
                 subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
                 body: """
@@ -97,11 +96,7 @@ pipeline {
                 <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
                 """,
                 mimeType: 'text/html',
-                to: '$DEFAULT_RECIPIENTS',
-                recipientProviders: [[$class: 'CulpritsRecipientProvider']], // sends to committers
-                replyTo: 'ayesha13abbasi@gmail.com',
-                from: 'ayesha13abbasi@gmail.com',
-                credentialsId: "${GMAIL_CREDENTIALS}"
+                recipientProviders: [[$class: 'CulpritsRecipientProvider']] // emails the committer(s)
             )
         }
 
