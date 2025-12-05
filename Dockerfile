@@ -18,7 +18,7 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | \
     apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Install ChromeDriver - Using fixed stable version
+# Install ChromeDriver - Using fixed stable version matching Chrome
 RUN CHROMEDRIVER_VERSION=131.0.6778.108 && \
     wget -q "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" -O /tmp/chromedriver.zip && \
     unzip -j /tmp/chromedriver.zip chromedriver-linux64/chromedriver -d /usr/local/bin/ && \
@@ -28,6 +28,11 @@ RUN CHROMEDRIVER_VERSION=131.0.6778.108 && \
     chromedriver --version && \
     echo "Chrome installed:" && \
     google-chrome --version
+
+# Create a non-root user for running tests
+RUN useradd -m -u 1000 testuser && \
+    mkdir -p /home/testuser/.wdm && \
+    chown -R testuser:testuser /home/testuser
 
 # Install Python dependencies
 COPY req.txt requirements.txt
@@ -39,5 +44,15 @@ WORKDIR /app
 # Copy test files
 COPY selenium-tests/ ./selenium-tests/
 
+# Change ownership to testuser
+RUN chown -R testuser:testuser /app
+
+# Switch to non-root user
+USER testuser
+
+# Set environment variables
+ENV WDM_LOCAL=1
+ENV HOME=/home/testuser
+
 # Run tests
-CMD ["pytest", "selenium-tests/test_todo_app.py", "-v", "-s", "--tb=short"]
+CMD ["pytest", "selenium-tests/test_todo_app.py", "-v", "-s", "--tb=short", "--junitxml=test-results.xml"]
