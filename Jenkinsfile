@@ -20,37 +20,44 @@ pipeline {
 
         stage('Setup Application') {
             steps {
-                sh '''#!/bin/bash
-                    # Kill old processes
-                    kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
-                    kill -9 $(lsof -t -i:${MONGODB_PORT}) 2>/dev/null || true
+                script {
+                    sh '''
+                        # Kill old processes
+                        kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
+                        kill -9 $(lsof -t -i:${MONGODB_PORT}) 2>/dev/null || true
 
-                    # Install dependencies
-                    npm install
+                        # Install dependencies
+                        npm install
 
-                    # Start MongoDB
-                    sudo systemctl start mongod || mongod --dbpath /data/db --fork --logpath /var/log/mongodb.log
-                    sleep 5
+                        # Start MongoDB
+                        sudo systemctl start mongod || mongod --dbpath /data/db --fork --logpath /var/log/mongodb.log
+                        sleep 5
 
-                    # Start app in background
-                    nohup npm start > app.log 2>&1 &
-                    echo $! > app.pid
-
-                    # Wait for app to start (up to 60 seconds)
-                    echo "Waiting for app to start on port ${APP_PORT}..."
-                    for i in $(seq 1 30); do
-                        if curl -f http://localhost:${APP_PORT} 2>/dev/null; then
-                            echo "✅ App started successfully!"
-                            exit 0
-                        fi
-                        echo "Attempt $i/30: App not ready yet..."
-                        sleep 2
-                    done
+                        # Start app in background
+                        nohup npm start > app.log 2>&1 &
+                        echo $! > app.pid
+                        
+                        echo "Waiting for app to start on port ${APP_PORT}..."
+                    '''
                     
-                    echo "❌ App failed to start after 60 seconds"
-                    cat app.log
-                    exit 1
-                '''
+                    // Wait for app using Groovy loop instead of shell
+                    def appStarted = false
+                    for (int i = 1; i <= 30; i++) {
+                        def result = sh(script: "curl -f http://localhost:${APP_PORT} 2>/dev/null", returnStatus: true)
+                        if (result == 0) {
+                            echo "✅ App started successfully on attempt ${i}!"
+                            appStarted = true
+                            break
+                        }
+                        echo "Attempt ${i}/30: App not ready yet..."
+                        sleep 2
+                    }
+                    
+                    if (!appStarted) {
+                        sh 'cat app.log'
+                        error("❌ App failed to start after 60 seconds")
+                    }
+                }
             }
         }
 
