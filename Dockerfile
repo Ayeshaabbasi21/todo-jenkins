@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome (modern method without apt-key)
+# Install Chrome
 RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | \
     gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg && \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | \
@@ -18,14 +18,16 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | \
     apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Install ChromeDriver
-RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1) && \
-    LATEST_STABLE=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
-        | grep -oP '"Stable":\{"version":"\K[^"]+') && \
-    wget -q "https://storage.googleapis.com/chrome-for-testing-public/${LATEST_STABLE}/linux64/chromedriver-linux64.zip" -O /tmp/chromedriver.zip && \
+# Install ChromeDriver - Using fixed stable version
+RUN CHROMEDRIVER_VERSION=131.0.6778.108 && \
+    wget -q "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" -O /tmp/chromedriver.zip && \
     unzip -j /tmp/chromedriver.zip chromedriver-linux64/chromedriver -d /usr/local/bin/ && \
     rm /tmp/chromedriver.zip && \
-    chmod +x /usr/local/bin/chromedriver
+    chmod +x /usr/local/bin/chromedriver && \
+    echo "ChromeDriver installed:" && \
+    chromedriver --version && \
+    echo "Chrome installed:" && \
+    google-chrome --version
 
 # Install Python dependencies
 COPY req.txt requirements.txt
