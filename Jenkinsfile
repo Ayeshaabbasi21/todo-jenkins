@@ -34,8 +34,9 @@ pipeline {
                         # Install npm dependencies
                         npm install
                         
-                        # Start MongoDB (assuming it's running as service)
-                        sudo systemctl start mongod || true
+                        # Start MongoDB in background (no sudo needed in Docker)
+                        mkdir -p /data/db
+                        mongod --dbpath /data/db --bind_ip_all &
                         
                         # Start application in background
                         nohup npm start > app.log 2>&1 &
@@ -72,13 +73,13 @@ pipeline {
         always {
             echo '========== Cleanup =========='
             script {
-                // Stop the application
+                # Stop the application
                 sh 'kill -9 $(lsof -t -i:5000) || true'
                 
-                // Archive test results
+                # Archive test results
                 junit allowEmptyResults: true, testResults: 'test-results.xml'
                 
-                // Clean up Docker images (keep last 3 builds)
+                # Clean up Docker images (keep last 3 builds)
                 sh """
                     docker images ${DOCKER_IMAGE} --format "{{.Tag}}" | sort -rn | tail -n +4 | xargs -I {} docker rmi ${DOCKER_IMAGE}:{} || true
                 """
