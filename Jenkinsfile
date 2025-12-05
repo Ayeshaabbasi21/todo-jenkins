@@ -20,7 +20,7 @@ pipeline {
 
         stage('Setup Application') {
             steps {
-                sh '''
+                sh '''#!/bin/bash
                     # Kill old processes
                     kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
                     kill -9 $(lsof -t -i:${MONGODB_PORT}) 2>/dev/null || true
@@ -38,7 +38,7 @@ pipeline {
 
                     # Wait for app to start (up to 60 seconds)
                     echo "Waiting for app to start on port ${APP_PORT}..."
-                    for i in {1..30}; do
+                    for i in $(seq 1 30); do
                         if curl -f http://localhost:${APP_PORT} 2>/dev/null; then
                             echo "✅ App started successfully!"
                             exit 0
@@ -47,7 +47,7 @@ pipeline {
                         sleep 2
                     done
                     
-                    echo "❌ App failed to start. Check app.log"
+                    echo "❌ App failed to start after 60 seconds"
                     cat app.log
                     exit 1
                 '''
