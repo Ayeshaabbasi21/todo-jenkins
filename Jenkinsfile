@@ -80,22 +80,22 @@ pipeline {
 
             // Email results
             emailext (
-                subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                body: """
-                <h2>Build ${currentBuild.currentResult}</h2>
-                <p><b>Job:</b> ${env.JOB_NAME}</p>
-                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
-                <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                <h3>Test Results</h3>
-                <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
-                """,
-                mimeType: 'text/html',
-                to: '$DEFAULT_RECIPIENTS',
-                recipientProviders: [[$class: 'CulpritsRecipientProvider']],
-                replyTo: 'ayesha13abbasi@gmail.com',
-                from: 'ayesha13abbasi@gmail.com',
-                credentialsId: "${GMAIL_CREDENTIALS}"
-            )
+    subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+    body: """
+    <h2>Build ${currentBuild.currentResult}</h2>
+    <p><b>Job:</b> ${env.JOB_NAME}</p>
+    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+    <p><b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+    <h3>Test Results</h3>
+    <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
+    """,
+    mimeType: 'text/html',
+    to: '$DEFAULT_RECIPIENTS',
+    recipientProviders: [[$class: 'CulpritsRecipientProvider']],
+    replyTo: 'ayesha13abbasi@gmail.com',
+    from: 'ayesha13abbasi@gmail.com'
+)
+
         }
 
         success {
