@@ -8,6 +8,13 @@ pipeline {
         DOCKER_IMAGE = 'todo-selenium-tests'
         GITHUB_CREDENTIALS = 'github-pat'
     }
+    
+    options {
+        buildDiscarder(logRotator(
+            numToKeepStr: '10',
+            artifactNumToKeepStr: '5'
+        ))
+    }
 
     stages {
         stage('Checkout Repo') {
@@ -40,7 +47,7 @@ pipeline {
                         echo "Waiting for app to start on port ${APP_PORT}..."
                     '''
                     
-                    // Wait for app using Groovy loop instead of shell
+                    // Wait for app using Groovy loop
                     def appStarted = false
                     for (int i = 1; i <= 30; i++) {
                         def result = sh(script: "curl -f http://localhost:${APP_PORT} 2>/dev/null", returnStatus: true)
@@ -73,8 +80,9 @@ pipeline {
         stage('Run Selenium Tests') {
             steps {
                 sh '''
-                    # Create test results directory
+                    # Create test results directory with proper permissions
                     mkdir -p test-results
+                    chmod 777 test-results
 
                     # Run Selenium tests using custom image
                     docker run --rm \
