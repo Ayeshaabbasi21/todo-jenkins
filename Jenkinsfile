@@ -4,24 +4,16 @@ pipeline {
     environment {
         APP_PORT = '5000'
         MONGODB_PORT = '27017'
-        APP_REPO = 'https://github.com/YourUsername/mern-app.git'
-        TEST_REPO = 'https://github.com/YourUsername/selenium-tests.git'
+        TODO_REPO = 'https://github.com/Ayeshaabbasi21/todo-jenkins.git'
         DOCKER_IMAGE = 'markhobson/maven-chrome'
         GITHUB_CREDENTIALS = 'github-pat'
+        GMAIL_CREDENTIALS = 'gmail-app-pass' // App password credential ID
     }
 
     stages {
-        stage('Checkout App') {
+        stage('Checkout Repo') {
             steps {
-                git url: "${APP_REPO}", credentialsId: "${GITHUB_CREDENTIALS}"
-            }
-        }
-
-        stage('Checkout Tests') {
-            steps {
-                dir('selenium-tests') {
-                    git url: "${TEST_REPO}", credentialsId: "${GITHUB_CREDENTIALS}"
-                }
+                git url: "${TODO_REPO}", credentialsId: "${GITHUB_CREDENTIALS}"
             }
         }
 
@@ -32,18 +24,18 @@ pipeline {
                     kill -9 $(lsof -t -i:${APP_PORT}) 2>/dev/null || true
                     kill -9 $(lsof -t -i:${MONGODB_PORT}) 2>/dev/null || true
 
-                    # Install npm dependencies
+                    # Install dependencies
                     npm install
 
                     # Start MongoDB
                     sudo systemctl start mongod || mongod --dbpath /data/db --fork --logpath /var/log/mongodb.log
                     sleep 5
 
-                    # Start MERN app
+                    # Start app
                     nohup npm start > app.log 2>&1 &
                     echo $! > app.pid
 
-                    # Wait for app
+                    # Wait for app to start
                     for i in {1..30}; do
                         curl -f http://localhost:${APP_PORT} && exit 0 || echo "Waiting for app..."
                         sleep 2
@@ -56,6 +48,8 @@ pipeline {
             steps {
                 sh '''
                     mkdir -p test-results
+
+                    # Run Selenium tests from selenium-tests folder
                     docker run --rm \
                         --network=host \
                         -v $(pwd)/selenium-tests:/app \
@@ -79,12 +73,12 @@ pipeline {
             '''
 
             // Publish JUnit results
-            junit allowEmptyResults: true, testResults: 'selenium-tests/target/surefire-reports/*.xml'
+            junit allowEmptyResults: true, testResults: 'test-results/*.xml'
 
             // Archive logs
             archiveArtifacts artifacts: 'app.log', allowEmptyArchive: true
 
-            // Email committers automatically using configured Jenkins SMTP
+            // Email results
             emailext (
                 subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
                 body: """
@@ -96,7 +90,11 @@ pipeline {
                 <p>Check Jenkins Test Report: <a href="${env.BUILD_URL}testReport/">Test Report</a></p>
                 """,
                 mimeType: 'text/html',
-                recipientProviders: [[$class: 'CulpritsRecipientProvider']] // emails the committer(s)
+                to: '$DEFAULT_RECIPIENTS',
+                recipientProviders: [[$class: 'CulpritsRecipientProvider']],
+                replyTo: 'ayesha13abbasi@gmail.com',
+                from: 'ayesha13abbasi@gmail.com',
+                credentialsId: "${GMAIL_CREDENTIALS}"
             )
         }
 
