@@ -9,14 +9,15 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import time
 
+
 # Base URL of your application
 BASE_URL = "http://localhost:5000"
 
 # Test credentials
 TEST_USER = {
     "name": "Test User",
-    "email": "testuser@example.com",
-    "password": "testpassword123"
+    "email": "ayeshaengineer@example.com",
+    "password": "passrocky_123"
 }
 
 @pytest.fixture(scope="session", autouse=True)
@@ -27,7 +28,7 @@ def setup_test_user():
     print("=" * 60)
     
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
@@ -62,22 +63,48 @@ def setup_test_user():
 
 @pytest.fixture(scope="function")
 def driver():
-    """Setup headless Chrome driver for each test"""
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    driver.implicitly_wait(10)
-    
-    yield driver
-    driver.quit()
+        chrome_options = Options()
+         
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
+        # Use a new temporary user profile
+        chrome_options.add_argument("--user-data-dir=C:/tmp/selenium_profile")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-infobars")
+
+        # Disable Chrome password manager
+        prefs = {
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "profile.default_content_setting_values.notifications": 2  # block notifications
+        }
+        chrome_options.add_experimental_option("prefs", prefs)
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
+
+        driver.implicitly_wait(10)
+            
+        yield driver
+        driver.quit()
+def open_todo_dropdown(driver):
+    """Click the Manage Todos dropdown and wait for menu items"""
+    dropdown = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.ID, "navbarDropdownMenulink"))
+    )
+    dropdown.click()
+    # Wait for the dropdown links to appear
+    WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.LINK_TEXT, "Add a new Todo"))
+    )
+    WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.LINK_TEXT, "List Todos"))
+    )
+    time.sleep(0.5)
 def login_user(driver, email, password):
     """Helper function to login a user"""
     try:
@@ -225,6 +252,48 @@ class TestUserAuthentication:
         
         assert "/login" in driver.current_url
         print("Should give error --> Empty login fields correctly prevented")
+
+class TestTodoManagement:
+    def test_06_add_todo_success(self, driver):
+        print("\n" + "="*60)
+        print("TEST 6: Add Todo Successfully")
+        print("="*60)
+
+        login_user(driver, TEST_USER["email"], TEST_USER["password"])
+        open_todo_dropdown(driver)
+
+        driver.find_element(By.LINK_TEXT, "Add a new Todo").click()
+        time.sleep(1)
+
+        title_input = driver.find_element(By.NAME, "title")
+        due_date_input = driver.find_element(By.NAME, "duedate")
+        details_input = driver.find_element(By.NAME, "details")
+
+        todo_title = f"Todo {int(time.time())}"
+        title_input.send_keys(todo_title)
+        due_date_input.send_keys("2025-12-31")
+        details_input.send_keys("Adding via Selenium test")
+
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+        time.sleep(2)
+
+        assert "/todos" in driver.current_url.lower()
+        assert todo_title in driver.page_source
+        print("TEST PASSED: Todo added successfully")
+
+    def test_07_todos_list_shows_items(self, driver):
+        print("\n" + "="*60)
+        print("TEST 7: Todos List Display")
+        print("="*60)
+
+        login_user(driver, TEST_USER["email"], TEST_USER["password"])
+        open_todo_dropdown(driver)
+
+        driver.find_element(By.LINK_TEXT, "List Todos").click()
+        time.sleep(1)
+
+        assert "todo" in driver.page_source.lower()
+        print("TEST PASSED: Todos list visible to user")
 
 
 
