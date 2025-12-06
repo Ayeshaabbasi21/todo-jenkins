@@ -28,7 +28,7 @@ def setup_test_user():
     print("=" * 60)
     
     chrome_options = Options()
-    
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
