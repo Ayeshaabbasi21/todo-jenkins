@@ -10,6 +10,7 @@ The ToDo app uses the following technologies and javascript libraries:
 * mongoose
 * bcryptjs
 * passport
+* todo
 
 ## What is this?
 A simple todo app. Based on the tutorial session of Brad Traversy.
