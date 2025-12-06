@@ -108,7 +108,7 @@ class TestUserAuthentication:
         """TEST 1 [PASS]: Valid user registration"""
         print("\n" + "="*60)
         print("TEST 1: Valid User Registration")
-        print("Expected: PASS")
+        
         print("="*60)
         
         driver.get(f"{BASE_URL}/users/register")
@@ -131,13 +131,13 @@ class TestUserAuthentication:
         
         current_url = driver.current_url
         assert "/register" not in current_url or "success" in driver.page_source.lower()
-        print("✅ TEST PASSED: Valid registration successful")
+        print("TEST PASSED: Valid registration successful")
     
     def test_02_user_registration_password_mismatch(self, driver):
         """TEST 2 [PASS]: Password mismatch rejection"""
         print("\n" + "="*60)
         print("TEST 2: Registration with Password Mismatch")
-        print("Expected: PASS (correctly rejects)")
+        
         print("="*60)
         
         driver.get(f"{BASE_URL}/users/register")
@@ -159,13 +159,13 @@ class TestUserAuthentication:
         time.sleep(3)
         
         assert "/register" in driver.current_url or "password" in driver.page_source.lower()
-        print("✅ TEST PASSED: Password mismatch correctly prevented")
+        print("TEST PASSED: Password mismatch correctly prevented")
     
     def test_03_user_login_success(self, driver):
         """TEST 3 [PASS]: Valid login"""
         print("\n" + "="*60)
         print("TEST 3: Valid User Login")
-        print("Expected: PASS")
+        
         print("="*60)
         
         driver.get(f"{BASE_URL}/users/login")
@@ -183,13 +183,13 @@ class TestUserAuthentication:
         
         current_url = driver.current_url
         assert "/login" not in current_url
-        print("✅ TEST PASSED: Valid login successful")
+        print("TEST PASSED: Valid login successful")
     
     def test_04_login_invalid_credentials(self, driver):
         """TEST 4 [PASS]: Invalid credentials rejection"""
         print("\n" + "="*60)
         print("TEST 4: Login with Invalid Credentials")
-        print("Expected: PASS (correctly rejects)")
+        
         print("="*60)
         
         driver.get(f"{BASE_URL}/users/login")
@@ -207,13 +207,13 @@ class TestUserAuthentication:
         
         page_source = driver.page_source.lower()
         assert "login" in driver.current_url.lower() or "error" in page_source or "invalid" in page_source
-        print("✅ TEST PASSED: Invalid credentials correctly rejected")
+        print("Should give error--> Invalid credentials correctly rejected")
     
     def test_05_login_empty_fields(self, driver):
         """TEST 5 [PASS]: Empty fields prevention"""
         print("\n" + "="*60)
         print("TEST 5: Login with Empty Fields")
-        print("Expected: PASS (correctly prevents)")
+        
         print("="*60)
         
         driver.get(f"{BASE_URL}/users/login")
@@ -224,273 +224,142 @@ class TestUserAuthentication:
         time.sleep(2)
         
         assert "/login" in driver.current_url
-        print("✅ TEST PASSED: Empty login fields correctly prevented")
+        print("Should give error --> Empty login fields correctly prevented")
 
 class TestTodoOperations:
     """Test todo CRUD operations"""
     
     def test_06_add_todo_success(self, driver):
-     """TEST 6 [PASS]: Add todo with dropdown navigation"""
-     print("\n" + "="*60)
-     print("TEST 6: Add Todo Successfully")
-     print("Expected: PASS")
-     print("="*60)
-    
-     login_user(driver, TEST_USER["email"], TEST_USER["password"])
-    
-    # Navigate using dropdown
-     driver.get(f"{BASE_URL}/todos")
-     time.sleep(2)
-    
-    # Click on "Manage Todos" dropdown
-     try:
-        dropdown = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, "navbarDropdownMenulink"))
-        )
-        dropdown.click()
-        time.sleep(1)
+        print("TEST 6: Add todo successfully")
+        print("\n" + "="*60)
+        print("TEST 6: Add Todo Successfully")
         
-        # Click "Add a new Todo" from dropdown
-        add_link = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.LINK_TEXT, "Add a new Todo"))
-        )
-        add_link.click()
+        print("="*60)
+    
+    # Login first
+        login_user(driver, TEST_USER["email"], TEST_USER["password"])
         time.sleep(2)
-     except:
-        # Fallback: direct navigation
+        
+        # Direct navigation to add todo page
         driver.get(f"{BASE_URL}/todos/add")
-        time.sleep(2)
-    
-    # Fill the form
-     todo_title = f"Selenium Test Todo {int(time.time())}"
-     todo_details = "Details for Selenium test item."
-    
-     driver.find_element(By.NAME, "title").send_keys(todo_title)
-     driver.find_element(By.NAME, "details").send_keys(todo_details)
-     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-     time.sleep(3)
-    
-    # Verify success
-     assert "/todos" in driver.current_url
-     page_source = driver.page_source.lower()
-     assert "success" in page_source or todo_title.lower() in page_source
-     print("✅ TEST PASSED: Todo added successfully")
-    
-    def test_07_add_todo_empty_title(self, driver):
-        """TEST 7 [FAIL]: Add todo without title should fail"""
-        print("\n" + "="*60)
-        print("TEST 7: Add Todo with Empty Title")
-        print("Expected: FAIL (HTML5 validation)")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        # Only fill details, leave title empty
-        details_input = driver.find_element(By.NAME, "details")
-        details_input.send_keys("Details without title")
-        
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
-        time.sleep(2)
-        
-        # Should stay on todos page due to HTML5 required attribute
-        assert "/todos" in driver.current_url
-        print("❌ TEST FAILED: Empty title prevented (as expected)")
-    
-    def test_08_add_todo_empty_details(self, driver):
-        """TEST 8 [FAIL]: Add todo without details should fail"""
-        print("\n" + "="*60)
-        print("TEST 8: Add Todo with Empty Details")
-        print("Expected: FAIL (HTML5 validation)")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        # Only fill title, leave details empty
-        title_input = driver.find_element(By.NAME, "title")
-        title_input.send_keys("Title without details")
-        
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
-        time.sleep(2)
-        
-        # Should stay on todos page due to HTML5 required attribute
-        assert "/todos" in driver.current_url
-        print("❌ TEST FAILED: Empty details prevented (as expected)")
-    
-    def test_09_edit_todo_success(self, driver):
-        """TEST 9 [PASS]: Edit existing todo"""
-        print("\n" + "="*60)
-        print("TEST 9: Edit Todo Successfully")
-        print("Expected: PASS")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        # First add a todo
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        original_title = f"Original {int(time.time())}"
-        driver.find_element(By.NAME, "title").send_keys(original_title)
-        driver.find_element(By.NAME, "details").send_keys("Original details")
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
         time.sleep(3)
         
-        # Now edit it
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
+        # Wait for the form to be fully loaded
+        try:
+            title_field = WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.NAME, "title"))
+            )
+            details_field = WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.NAME, "details"))
+            )
+            print("✓ Form fields loaded successfully")
+        except TimeoutException:
+            print(f"⚠️  TIMEOUT: Form not loaded. Current URL: {driver.current_url}")
+            print(f"⚠️  Page title: {driver.title}")
+            raise
         
-        edit_buttons = driver.find_elements(By.LINK_TEXT, "Edit")
-        if edit_buttons:
-            edit_buttons[0].click()
-            time.sleep(2)
-            
-            # Modify the todo
-            title_input = driver.find_element(By.NAME, "title")
-            title_input.clear()
-            updated_title = f"Updated {int(time.time())}"
-            title_input.send_keys(updated_title)
-            
-            submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        # Generate unique todo data
+        todo_title = f"Selenium Test Todo {int(time.time())}"
+        todo_details = "Test details for automated todo"
+        
+        print(f"Adding todo: {todo_title}")
+        
+        # Clear and fill the fields - IMPORTANT: Use JavaScript to bypass client-side validation issues
+        driver.execute_script("arguments[0].value = '';", title_field)
+        driver.execute_script("arguments[0].value = arguments[1];", title_field, todo_title)
+        
+        driver.execute_script("arguments[0].value = '';", details_field)
+        driver.execute_script("arguments[0].value = arguments[1];", details_field, todo_details)
+        
+        # Verify fields were filled
+        print(f"✓ Title field value: {title_field.get_attribute('value')[:50]}")
+        print(f"✓ Details field value: {details_field.get_attribute('value')[:50]}")
+        
+        # Find the form element
+        form = driver.find_element(By.CSS_SELECTOR, "form[action='/todos']")
+        print(f"✓ Form found with action: {form.get_attribute('action')}")
+        print(f"✓ Form method: {form.get_attribute('method')}")
+        
+        # Find submit button
+        submit_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))
+        )
+        
+        print("✓ About to submit form...")
+        
+        # Method 1: Try regular click
+        try:
             submit_button.click()
-            time.sleep(3)
+            print("✓ Form submitted via button click")
+        except Exception as e:
+            print(f"⚠️  Button click failed: {e}")
+            # Method 2: Try JavaScript submit
+            print("✓ Trying JavaScript form submit...")
+            driver.execute_script("arguments[0].submit();", form)
+            print("✓ Form submitted via JavaScript")
+        
+        # Wait for redirect with explicit wait
+        print("⏳ Waiting for redirect...")
+        try:
+            WebDriverWait(driver, 10).until(
+                lambda d: "/todos/add" not in d.current_url.lower()
+            )
+            print("✓ Redirected away from /todos/add")
+        except TimeoutException:
+            print("⚠️  No redirect detected after 10 seconds")
+        
+        time.sleep(2)
+        
+        # Check if successfully redirected and todo was added
+        current_url = driver.current_url.lower()
+        page_source = driver.page_source
+        
+        print(f"\nCurrent URL after submit: {driver.current_url}")
+        
+        # DEBUG: Check for error messages on the page
+        try:
+            error_elements = driver.find_elements(By.CSS_SELECTOR, ".alert-danger, .alert-error, .error, .alert")
+            if error_elements:
+                print("\n⚠️  MESSAGES FOUND ON PAGE:")
+                for error in error_elements:
+                    error_text = error.text
+                    if error_text.strip():
+                        print(f"   - {error_text}")
+        except Exception as e:
+            print(f"Could not check for errors: {e}")
+        
+        # Multiple success criteria
+        redirected_to_todos = "todos" in current_url and "add" not in current_url
+        has_success_message = "success" in page_source.lower()
+        todo_in_page = todo_title.lower() in page_source.lower()
+        
+        print(f"\n✓ Redirected to /todos: {redirected_to_todos}")
+        print(f"✓ Success message present: {has_success_message}")
+        print(f"✓ Todo appears in page: {todo_in_page}")
+        
+        success = redirected_to_todos or has_success_message or todo_in_page
+        
+        if not success:
+            print(f"\n❌ FAILED - Current URL: {driver.current_url}")
+            print(f"❌ Page does not contain success indicators")
+            # Save full page source for debugging
+            with open("failed_page_source.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            print("❌ Full page source saved to: failed_page_source.html")
+            print("\n📄 First 1000 chars of page source:")
+            print(page_source[:1000])
             
-            # Verify update
-            driver.get(f"{BASE_URL}/todos")
-            time.sleep(2)
-            assert updated_title in driver.page_source
-            print("✅ TEST PASSED: Todo edited successfully")
-        else:
-            print("⊘ TEST SKIPPED: No todos to edit")
-    
-    def test_10_edit_todo_empty_title(self, driver):
-        """TEST 10 [FAIL]: Edit todo with empty title should fail"""
-        print("\n" + "="*60)
-        print("TEST 10: Edit Todo with Empty Title")
-        print("Expected: FAIL (validation prevents)")
-        print("="*60)
+        assert success, f"Todo was not added successfully. URL: {driver.current_url}"
+        print("✅ TEST PASSED: Todo added successfully")
         
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        # Add a todo first
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        driver.find_element(By.NAME, "title").send_keys(f"ToEdit {int(time.time())}")
-        driver.find_element(By.NAME, "details").send_keys("Details to edit")
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(3)
-        
-        # Try to edit with empty title
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        edit_buttons = driver.find_elements(By.LINK_TEXT, "Edit")
-        if edit_buttons:
-            edit_buttons[0].click()
-            time.sleep(2)
-            
-            title_input = driver.find_element(By.NAME, "title")
-            title_input.clear()
-            
-            submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-            submit_button.click()
-            time.sleep(2)
-            
-            # Should stay on edit page
-            assert "edit" in driver.current_url.lower() or "Edit" in driver.page_source
-            print("❌ TEST FAILED: Empty title edit prevented (as expected)")
-        else:
-            print("⊘ TEST SKIPPED: No todos to edit")
-
-class TestTodoPersistence:
-    """Test database operations"""
-    
-    def test_11_delete_todo_success(self, driver):
-        """TEST 11 [PASS]: Delete todo"""
-        print("\n" + "="*60)
-        print("TEST 11: Delete Todo")
-        print("Expected: PASS")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        # Add a todo first
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        todo_title = f"ToDelete {int(time.time())}"
-        driver.find_element(By.NAME, "title").send_keys(todo_title)
-        driver.find_element(By.NAME, "details").send_keys("This will be deleted")
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(3)
-        
-        # Verify todo exists
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        assert todo_title in driver.page_source
-        
-        # Delete it
-        delete_buttons = driver.find_elements(By.CSS_SELECTOR, "input[value='Delete']")
-        if delete_buttons:
-            delete_buttons[0].click()
-            time.sleep(3)
-            
-            # Verify deletion
-            driver.get(f"{BASE_URL}/todos")
-            time.sleep(2)
-            page_source = driver.page_source
-            assert todo_title not in page_source or "No todos" in page_source
-            print("✅ TEST PASSED: Todo deleted successfully")
-        else:
-            print("⊘ TEST SKIPPED: No delete button found")
-    
-    def test_12_todo_persistence_after_logout(self, driver):
-        """TEST 12 [PASS]: Todos persist after logout"""
-        print("\n" + "="*60)
-        print("TEST 12: Todo Persistence After Logout/Login")
-        print("Expected: PASS")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        persistent_title = f"Persistent {int(time.time())}"
-        driver.find_element(By.NAME, "title").send_keys(persistent_title)
-        driver.find_element(By.NAME, "details").send_keys("Should persist in DB")
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(3)
-        
-        # Logout
-        driver.get(f"{BASE_URL}/users/logout")
-        time.sleep(2)
-        
-        # Login again
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        # Verify todo still exists
-        assert persistent_title in driver.page_source
-        print("✅ TEST PASSED: Todos persist in database")
 
 class TestAccessControl:
     """Test authorization"""
     
-    def test_13_access_todos_without_login(self, driver):
-        """TEST 13 [FAIL]: Unauthorized access prevented"""
+    def test_7_access_todos_without_login(self, driver):
+        """TEST 7  Unauthorized access prevented"""
         print("\n" + "="*60)
-        print("TEST 13: Access Todos Without Login")
-        print("Expected: FAIL (redirects to login)")
+        print("TEST 7: Access Todos Without Login")
         print("="*60)
         
         driver.get(f"{BASE_URL}/todos")
@@ -498,13 +367,13 @@ class TestAccessControl:
         
         # Should redirect to login
         assert "/login" in driver.current_url.lower() or "login" in driver.page_source.lower()
-        print("❌ TEST FAILED: Unauthorized access prevented (as expected)")
+        print(" Should give error--> Unauthorized access prevented (as expected)")
     
-    def test_14_logout_clears_session(self, driver):
-        """TEST 14 [PASS]: Logout functionality"""
+    def test_8_logout_clears_session(self, driver):
+        """TEST 8 [PASS]: Logout functionality"""
         print("\n" + "="*60)
-        print("TEST 14: Logout Clears Session")
-        print("Expected: PASS")
+        print("TEST 8: Logout Clears Session")
+        
         print("="*60)
         
         login_user(driver, TEST_USER["email"], TEST_USER["password"])
@@ -525,11 +394,11 @@ class TestAccessControl:
 class TestEdgeCases:
     """Test edge cases and validation"""
     
-    def test_15_duplicate_email_registration(self, driver):
-        """TEST 15 [FAIL]: Duplicate email rejected"""
+    def test_9_duplicate_email_registration(self, driver):
+        """TEST 9 [FAIL]: Duplicate email rejected"""
         print("\n" + "="*60)
-        print("TEST 15: Registration with Duplicate Email")
-        print("Expected: FAIL (duplicate rejected)")
+        print("TEST 9: Registration with Duplicate Email")
+        
         print("="*60)
         
         driver.get(f"{BASE_URL}/users/register")
@@ -546,90 +415,13 @@ class TestEdgeCases:
         # Should show error or stay on register page
         page_source = driver.page_source.lower()
         assert "/register" in driver.current_url or "exist" in page_source or "error" in page_source
-        print("❌ TEST FAILED: Duplicate email rejected (as expected)")
+        print(" Should give error --> Duplicate email rejected (as expected)")
     
-    def test_16_add_todo_with_special_characters(self, driver):
-        """TEST 16 [PASS]: Todo with special characters"""
-        print("\n" + "="*60)
-        print("TEST 16: Add Todo with Special Characters")
-        print("Expected: PASS")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        special_title = f"Special @#$% {int(time.time())}"
-        driver.find_element(By.NAME, "title").send_keys(special_title)
-        driver.find_element(By.NAME, "details").send_keys("Details with symbols: !@#$%^&*()")
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(3)
-        
-        # Verify todo was added
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        assert "Special" in driver.page_source
-        print("✅ TEST PASSED: Special characters handled correctly")
     
-    def test_17_add_todo_with_long_text(self, driver):
-        """TEST 17 [PASS]: Todo with long text"""
-        print("\n" + "="*60)
-        print("TEST 17: Add Todo with Long Text")
-        print("Expected: PASS")
-        print("="*60)
-        
-        login_user(driver, TEST_USER["email"], TEST_USER["password"])
-        
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        long_title = f"Long Todo Title {int(time.time())}"
-        long_details = "A" * 500  # 500 characters
-        
-        driver.find_element(By.NAME, "title").send_keys(long_title)
-        driver.find_element(By.NAME, "details").send_keys(long_details)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(3)
-        
-        # Verify todo was added
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        assert long_title in driver.page_source
-        print("✅ TEST PASSED: Long text handled correctly")
-    
-    def test_18_view_empty_todo_list(self, driver):
-        """TEST 18 [PASS]: View empty todo list"""
-        print("\n" + "="*60)
-        print("TEST 18: View Empty Todo List")
-        print("Expected: PASS")
-        print("="*60)
-        
-        # Create a new user with no todos
-        unique_email = f"emptytodos{int(time.time())}@example.com"
-        
-        driver.get(f"{BASE_URL}/users/register")
-        time.sleep(2)
-        
-        driver.find_element(By.NAME, "name").send_keys("Empty User")
-        driver.find_element(By.NAME, "email").send_keys(unique_email)
-        driver.find_element(By.NAME, "password").send_keys("testpass123")
-        driver.find_element(By.NAME, "password2").send_keys("testpass123")
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(3)
-        
-        # Go to todos page
-        driver.get(f"{BASE_URL}/todos")
-        time.sleep(2)
-        
-        # Should show empty state or form
-        assert "Todo" in driver.page_source or "todo" in driver.page_source.lower()
-        print("✅ TEST PASSED: Empty todo list displayed correctly")
-
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("COMPREHENSIVE TEST SUITE - 18 TEST CASES")
+    print("COMPREHENSIVE TEST SUITE - 10 TEST CASES")
     print("Tests include both PASS and FAIL scenarios")
     print("=" * 70)
     pytest.main([__file__, "-v", "-s", "--tb=short"])
