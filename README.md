@@ -1,4 +1,4 @@
-# Simple Todoo App with MongoDB, Express.js and Node.jsss
+ # Simple Todoo App with MongoDB, Express.js and Node.jsss
 The ToDo app uses the following technologies and javascript libraries:
 * MongoDB
 * Express.js
