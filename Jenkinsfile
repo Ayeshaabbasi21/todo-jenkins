@@ -75,82 +75,83 @@ pipeline {
     }
     
     post {
-    always {
-        script {
-            echo 'Post-build actions...'
-            
-            // DON'T kill the app - let it keep running!
-            echo 'Application continues running on port 5000'
-            
-            try {
-                env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
-                env.GIT_AUTHOR_NAME = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
-                env.GIT_AUTHOR_EMAIL = sh(script: 'git log -1 --pretty=%ae', returnStdout: true).trim()
-            } catch (Exception e) {
-                env.GIT_AUTHOR_EMAIL = 'ayesha13abbasi@gmail.com'
+        always {
+            script {
+                echo 'Post-build actions...'
+                
+                // DON'T kill the app - let it keep running for deployment!
+                echo 'Application continues running on port 5000'
+                
+                try {
+                    env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    env.GIT_AUTHOR_NAME = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+                    env.GIT_AUTHOR_EMAIL = sh(script: 'git log -1 --pretty=%ae', returnStdout: true).trim()
+                } catch (Exception e) {
+                    env.GIT_AUTHOR_EMAIL = 'ayesha13abbasi@gmail.com'
+                }
             }
+            
+            junit allowEmptyResults: true, testResults: 'test-results/*.xml'
+            archiveArtifacts artifacts: 'test-results/*.xml, app.log', allowEmptyArchive: true
+            
+            emailext (
+                subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: """
+                    <html>
+                    <body style="font-family: Arial, sans-serif;">
+                        <h2 style="color: ${currentBuild.currentResult == 'SUCCESS' ? 'green' : 'red'}">
+                            Build ${currentBuild.currentResult}
+                        </h2>
+                        
+                        <h3>Build Information</h3>
+                        <table border="1" cellpadding="10" style="border-collapse: collapse;">
+                            <tr><td><b>Project</b></td><td>${env.JOB_NAME}</td></tr>
+                            <tr><td><b>Build Number</b></td><td>#${env.BUILD_NUMBER}</td></tr>
+                            <tr><td><b>Status</b></td><td>${currentBuild.currentResult}</td></tr>
+                            <tr><td><b>Duration</b></td><td>${currentBuild.durationString}</td></tr>
+                            <tr><td><b>Deployment URL</b></td><td><a href="http://54.163.42.106:5000">http://54.163.42.106:5000</a></td></tr>
+                        </table>
+                        
+                        <h3>Commit Details</h3>
+                        <table border="1" cellpadding="10" style="border-collapse: collapse;">
+                            <tr><td><b>Commit ID</b></td><td>${env.GIT_COMMIT_SHORT}</td></tr>
+                            <tr><td><b>Author</b></td><td>${env.GIT_AUTHOR_NAME}</td></tr>
+                            <tr><td><b>Email</b></td><td>${env.GIT_AUTHOR_EMAIL}</td></tr>
+                            <tr><td><b>Message</b></td><td>${env.GIT_COMMIT_MSG}</td></tr>
+                        </table>
+                        
+                        <h3>Test Results</h3>
+                        <p>Total Tests: 10 | Status: ${currentBuild.currentResult}</p>
+                        
+                        <h3>Quick Links</h3>
+                        <p>
+                            <a href="${env.BUILD_URL}">View Build</a> | 
+                            <a href="${env.BUILD_URL}console">Console Output</a> | 
+                            <a href="${env.BUILD_URL}testReport">Test Report</a> |
+                            <a href="http://54.163.42.106:5000">Live Deployment</a>
+                        </p>
+                        
+                        <p style="color: #666; font-size: 12px;">
+                            <i>Automated email from Jenkins CI/CD Pipeline</i>
+                        </p>
+                    </body>
+                    </html>
+                """,
+                to: "${env.GIT_AUTHOR_EMAIL}",
+                mimeType: 'text/html'
+            )
+            
+            echo "Email sent to: ${env.GIT_AUTHOR_EMAIL}"
+            echo "Deployment available at: http://54.163.42.106:5000"
         }
         
-        junit allowEmptyResults: true, testResults: 'test-results/*.xml'
-        archiveArtifacts artifacts: 'test-results/*.xml, app.log', allowEmptyArchive: true
+        success {
+            echo 'Build succeeded! App running at http://54.163.42.106:5000'
+        }
         
-        emailext (
-            subject: "Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            body: """
-                <html>
-                <body style="font-family: Arial, sans-serif;">
-                    <h2 style="color: ${currentBuild.currentResult == 'SUCCESS' ? 'green' : 'red'}">
-                        Build ${currentBuild.currentResult}
-                    </h2>
-                    
-                    <h3>Build Information</h3>
-                    <table border="1" cellpadding="10" style="border-collapse: collapse;">
-                        <tr><td><b>Project</b></td><td>${env.JOB_NAME}</td></tr>
-                        <tr><td><b>Build Number</b></td><td>#${env.BUILD_NUMBER}</td></tr>
-                        <tr><td><b>Status</b></td><td>${currentBuild.currentResult}</td></tr>
-                        <tr><td><b>Duration</b></td><td>${currentBuild.durationString}</td></tr>
-                        <tr><td><b>Deployment URL</b></td><td><a href="http://54.163.42.106:5000">http://54.163.42.106:5000</a></td></tr>
-                    </table>
-                    
-                    <h3>Commit Details</h3>
-                    <table border="1" cellpadding="10" style="border-collapse: collapse;">
-                        <tr><td><b>Commit ID</b></td><td>${env.GIT_COMMIT_SHORT}</td></tr>
-                        <tr><td><b>Author</b></td><td>${env.GIT_AUTHOR_NAME}</td></tr>
-                        <tr><td><b>Email</b></td><td>${env.GIT_AUTHOR_EMAIL}</td></tr>
-                        <tr><td><b>Message</b></td><td>${env.GIT_COMMIT_MSG}</td></tr>
-                    </table>
-                    
-                    <h3>Test Results</h3>
-                    <p>Total Tests: 10 | Status: ${currentBuild.currentResult}</p>
-                    
-                    <h3>Quick Links</h3>
-                    <p>
-                        <a href="${env.BUILD_URL}">View Build</a> | 
-                        <a href="${env.BUILD_URL}console">Console Output</a> | 
-                        <a href="${env.BUILD_URL}testReport">Test Report</a> |
-                        <a href="http://54.163.42.106:5000">Live Deployment</a>
-                    </p>
-                    
-                    <p style="color: #666; font-size: 12px;">
-                        <i>Automated email from Jenkins CI/CD Pipeline</i>
-                    </p>
-                </body>
-                </html>
-            """,
-            to: "${env.GIT_AUTHOR_EMAIL}",
-            mimeType: 'text/html'
-        )
-        
-        echo "Email sent to: ${env.GIT_AUTHOR_EMAIL}"
-        echo "Deployment available at: http://54.163.42.106:5000"
-    }
-    
-    success {
-        echo 'Build succeeded! App running at http://54.163.42.106:5000'
-    }
-    
-    failure {
-        echo 'Build failed! Check logs for details.'
+        failure {
+            echo 'Build failed! Check logs for details.'
+        }
     }
 }
