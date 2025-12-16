@@ -12,7 +12,7 @@ The ToDo app uses the following technologies and javascript libraries:
 * passport
 
 ok
-
+ok
 
 ## What is this?
 A simple todo app. Based on the tutorial session of Brad Traversy.
