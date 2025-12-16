@@ -11,7 +11,7 @@ The ToDo app uses the following technologies and javascript libraries:
 * bcryptjsj
 * passport
 
-ok
+okOK
 ok
 
 ## What is this?
